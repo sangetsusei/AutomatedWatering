@@ -1,0 +1,5 @@
+{
+    "board": "arduino:avr:uno",
+    "sketch": "AutomatedWatering.ino",
+    "port":"COM3"
+}
