@@ -48,7 +48,7 @@ static char waterLevelOutstr[16];
 #define CS_PIN    10
 
 //Relays
-#define RELAY_1 = 6
+#define RELAY_1 8
 
 // HARDWARE SPI
 MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
@@ -70,7 +70,7 @@ void displayMessage(String str)
 {
 	static char* cp = newMessage;
 	
-	for (int count = 0; str[count] != '\0'; count++)//我日你妈foreach 编译报错
+	for (int count = 0; str[count] != '\0'; count++)// Why can't I use Foreach???
 	{
 		*cp = str[count];
 		if ((*cp == '\n') || (cp - newMessage >= BUF_SIZE - 2)) // end of message character or full buffer
@@ -131,6 +131,8 @@ void setup() {
 	dht.begin();
 	P.begin();
 	P.displayText(currentMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+	pinMode(RELAY_1, OUTPUT);
+	digitalWrite(RELAY_1, HIGH);
 }
 
 void loop() 
