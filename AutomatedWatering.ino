@@ -6,6 +6,7 @@
 #include <DHT.h>
 #include <DHT_U.h>
 
+
 // Turn on debug statements to the serial output
 #define DEBUG 0
 
@@ -22,17 +23,22 @@ unsigned long currentMillis = millis();
 #endif
 
 // Sensors
-const long sensorsUpdateInterval = 5000; //ms
-//const long displayUpdateInterval = 3000; //ms
-unsigned long previousMillis_Ssr = 0;        // will store last time sensor values was updated
-unsigned long previousMillis_Dsp = 0;        // will store last time screen message was updated
+const long sensorsUpdateInterval = 3000; //ms
+unsigned long previousMillis_Ssr;        // will store last time sensor values was updated 
+
 #define DHTPIN 3     // Digital pin connected to the DHT sensor 
 #define DHTTYPE    DHT11     // DHT 11 type sensor
 DHT_Unified dht(DHTPIN, DHTTYPE);
+
+#define WSPIN A4
+
 double temperature =  0;
 double humidity = 0;
+int waterLevel = 0;
+
 static char tempratureOutstr[16];
 static char humidityOutstr[16];
+static char waterLevelOutstr[16];
 
 // LED matrix
 #define HARDWARE_TYPE MD_MAX72XX::ICSTATION_HW
@@ -40,6 +46,9 @@ static char humidityOutstr[16];
 #define CLK_PIN   13
 #define DATA_PIN  11
 #define CS_PIN    10
+
+//Relays
+#define RELAY_1 = 6
 
 // HARDWARE SPI
 MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
@@ -92,9 +101,9 @@ void updateScreen()
 	}
 }
 
-void updateAirTemperatureAndHumidity()
+void updateSensorValue()
 {
-	// Get temperature event and print its value.
+	// Get temperature event
 	sensors_event_t event;
 	dht.temperature().getEvent(&event);
 	if (isnan(event.temperature)) 
@@ -102,27 +111,18 @@ void updateAirTemperatureAndHumidity()
     	PRINTS("Error reading temperature!");
 	}
 	else {
-		Serial.print(F("Temperature: "));
-    Serial.print(event.temperature);
-    Serial.println(F("°C"));
-    	//Serial.print(F("Temperature: "));
     	temperature = event.temperature;
-    	//Serial.println(F("°C"));
 	}
-  	// Get humidity event and print its value.
+  	// Get humidity event
 		dht.humidity().getEvent(&event);
 	if (isnan(event.relative_humidity)) 
 	{
 		PRINTS("Error reading humidity!");
 	}
 	else {
-		Serial.print(F("Humidity: "));
-    Serial.print(event.relative_humidity);
-    Serial.println(F("%"));
-    	//Serial.print(F("Humidity: "));
     	humidity = event.relative_humidity;
-    	//Serial.println(F("%"));
 	}
+	waterLevel = map(analogRead(WSPIN), 0, 680, 0, 100);
 }
 
 void setup() {
@@ -138,16 +138,13 @@ void loop()
   // put your main code here, to run repeatedly:
 	static uint8_t	displayStatus = 0;
 	unsigned long currentMillis_Ssr = millis();
-	unsigned long currentMillis_Dsp = millis();
-	
-	//P.displayAnimate();
 
 	updateScreen();
 
 	if (currentMillis_Ssr - previousMillis_Ssr >= sensorsUpdateInterval) {
 		// save the last time you update the Sensors value
 		previousMillis_Ssr = currentMillis_Ssr;
-		updateAirTemperatureAndHumidity();
+		updateSensorValue();
 	}
 
 	if (temperature != 0)
@@ -170,10 +167,13 @@ void loop()
 			displayMessage(" %            ");
 			displayStatus++;
 			//Serial.println("x");
-			displayStatus = 0;
 			break;
 		default:
-			//
+			displayMessage("Water Level = ");
+			dtostrf(waterLevel, 3, 0, waterLevelOutstr);
+			displayMessage(waterLevelOutstr);
+			displayMessage(" %              ");
+			displayStatus = 0;
 			break;
 		}
 
