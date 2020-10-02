@@ -10,7 +10,10 @@
 // Turn on debug statements to the serial output
 #define DEBUG 0
 
-unsigned long currentMillis = millis();
+// will store last update time
+unsigned long previousMillis_Ssr = 0;
+unsigned long previousMillis_Water = 0;
+unsigned long previousMillis_Pump = 0;
 
 #if DEBUG
 #define PRINT(s, x) { Serial.print(F(s)); Serial.print(x); }
@@ -24,7 +27,8 @@ unsigned long currentMillis = millis();
 
 // Sensors
 const long sensorsUpdateInterval = 3000; //ms
-unsigned long previousMillis_Ssr;        // will store last time sensor values was updated 
+const long wateringOffsetInterval = 3600000; //ms
+const long wateringTime = 10000; //ms
 
 #define DHTPIN 3     // Digital pin connected to the DHT sensor 
 #define DHTTYPE    DHT11     // DHT 11 type sensor
@@ -49,6 +53,10 @@ static char waterLevelOutstr[16];
 
 //Relays
 #define RELAY_1 8
+#define RELAY_2 9 
+int Relay1State = HIGH;
+int Relay2State = LOW;
+
 
 // HARDWARE SPI
 MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
@@ -88,6 +96,12 @@ void displayMessage(String str)
 	}
 }
 
+void updateRealys()
+{
+	digitalWrite(RELAY_1, Relay1State);
+	digitalWrite(RELAY_2, Relay2State);
+}
+
 void updateScreen()
 {
 	if (P.displayAnimate())
@@ -122,7 +136,20 @@ void updateSensorValue()
 	else {
     	humidity = event.relative_humidity;
 	}
-	waterLevel = map(analogRead(WSPIN), 0, 680, 0, 100);
+	waterLevel = map(analogRead(WSPIN), 0, 800, 0, 100);
+}
+
+bool isWaterLevelLow()
+{
+	if (waterLevel <= 35)
+	{
+		return true;
+	}else
+	{
+		return false;
+	}
+	
+	
 }
 
 void setup() {
@@ -132,22 +159,41 @@ void setup() {
 	P.begin();
 	P.displayText(currentMessage, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
 	pinMode(RELAY_1, OUTPUT);
-	digitalWrite(RELAY_1, HIGH);
+	digitalWrite(RELAY_1, HIGH); //Turn off the realy first
 }
 
 void loop() 
 {
   // put your main code here, to run repeatedly:
 	static uint8_t	displayStatus = 0;
-	unsigned long currentMillis_Ssr = millis();
+	unsigned long currentMillis = millis();
 
 	updateScreen();
+	updateRealys();
 
-	if (currentMillis_Ssr - previousMillis_Ssr >= sensorsUpdateInterval) {
+	if (currentMillis - previousMillis_Ssr >= sensorsUpdateInterval) {
 		// save the last time you update the Sensors value
-		previousMillis_Ssr = currentMillis_Ssr;
+		previousMillis_Ssr = currentMillis;
 		updateSensorValue();
 	}
+
+	if (isWaterLevelLow)
+	{
+		previousMillis_Water = currentMillis;
+		if (currentMillis - previousMillis_Water >= wateringOffsetInterval)
+		{
+			Relay1State = LOW;
+			previousMillis_Pump = currentMillis;
+		}
+	}
+
+	if ((currentMillis - previousMillis_Pump >= wateringTime)&&(Relay1State = LOW));
+	{
+		Relay1State = HIGH;
+	}
+	
+	
+
 
 	if (temperature != 0)
 	{
