@@ -29,7 +29,7 @@ bool setpreviousMillis_CheckWaterFlag = true;
 // Sensors
 const long sensorsUpdateInterval = 3000; //ms
 const long waterLevelCheckOffsetInterval = 100000; //ms
-const long wateringTime = 5000; //ms
+const long wateringTime = 3000; //ms
 
 #define DHTPIN 3     // Digital pin connected to the DHT sensor 
 #define DHTTYPE    DHT11     // DHT 11 type sensor
@@ -167,7 +167,7 @@ void loop()
 		Serial.println("Updated sensors");
 	}
 
-	if (waterLevel <= 30)
+	if (waterLevel <= 25)
 	{
 		if (setpreviousMillis_CheckWaterFlag)
 		{
