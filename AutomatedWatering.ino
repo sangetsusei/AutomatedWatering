@@ -138,7 +138,7 @@ void updateSensorValue()
     	humidity = event.relative_humidity;
 	}
 	Serial.println(analogRead(WSPIN));
-	waterLevel = map(analogRead(WSPIN), 400, 960 , 0, 100);
+	waterLevel = map(analogRead(WSPIN), 400, 620 , 0, 100);
 }
 
 void setup() {
