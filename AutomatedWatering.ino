@@ -12,8 +12,9 @@
 
 // will store last update time
 unsigned long previousMillis_Ssr = 0;
-unsigned long previousMillis_Water = 0;
+unsigned long previousMillis_CheckWater = 0;
 unsigned long previousMillis_Pump = 0;
+bool setpreviousMillis_CheckWaterFlag = true;
 
 #if DEBUG
 #define PRINT(s, x) { Serial.print(F(s)); Serial.print(x); }
@@ -27,8 +28,8 @@ unsigned long previousMillis_Pump = 0;
 
 // Sensors
 const long sensorsUpdateInterval = 3000; //ms
-const long wateringOffsetInterval = 3600000; //ms
-const long wateringTime = 10000; //ms
+const long waterLevelCheckOffsetInterval = 100000; //ms
+const long wateringTime = 5000; //ms
 
 #define DHTPIN 3     // Digital pin connected to the DHT sensor 
 #define DHTTYPE    DHT11     // DHT 11 type sensor
@@ -38,7 +39,7 @@ DHT_Unified dht(DHTPIN, DHTTYPE);
 
 double temperature =  0;
 double humidity = 0;
-int waterLevel = 0;
+int waterLevel = 100;
 
 static char tempratureOutstr[16];
 static char humidityOutstr[16];
@@ -136,20 +137,8 @@ void updateSensorValue()
 	else {
     	humidity = event.relative_humidity;
 	}
-	waterLevel = map(analogRead(WSPIN), 0, 800, 0, 100);
-}
-
-bool isWaterLevelLow()
-{
-	if (waterLevel <= 35)
-	{
-		return true;
-	}else
-	{
-		return false;
-	}
-	
-	
+	Serial.println(analogRead(WSPIN));
+	waterLevel = map(analogRead(WSPIN), 400, 960 , 0, 100);
 }
 
 void setup() {
@@ -175,21 +164,31 @@ void loop()
 		// save the last time you update the Sensors value
 		previousMillis_Ssr = currentMillis;
 		updateSensorValue();
+		Serial.println("Updated sensors");
 	}
 
-	if (isWaterLevelLow)
+	if (waterLevel <= 30)
 	{
-		previousMillis_Water = currentMillis;
-		if (currentMillis - previousMillis_Water >= wateringOffsetInterval)
+		if (setpreviousMillis_CheckWaterFlag)
 		{
+			Serial.println("water level low");
+			previousMillis_CheckWater = currentMillis;
+			setpreviousMillis_CheckWaterFlag = false;
+		}
+		
+		if ((currentMillis - previousMillis_CheckWater >= waterLevelCheckOffsetInterval)&&(Relay1State == HIGH))
+		{
+			Serial.println("Start pump");
 			Relay1State = LOW;
 			previousMillis_Pump = currentMillis;
 		}
 	}
 
-	if ((currentMillis - previousMillis_Pump >= wateringTime)&&(Relay1State = LOW));
+	if ((currentMillis - previousMillis_Pump >= wateringTime)&&(Relay1State == LOW))
 	{
+		Serial.println("Done watering");
 		Relay1State = HIGH;
+		setpreviousMillis_CheckWaterFlag = true;
 	}
 	
 	
@@ -203,7 +202,7 @@ void loop()
 			displayMessage("Air Temperature = ");
 			dtostrf(temperature, 4, 2, tempratureOutstr);
 			displayMessage(tempratureOutstr);
-			Serial.println(temperature);
+			//Serial.println(temperature);
 			displayMessage(" 'C      ");
 			displayStatus++;
 			//Serial.println("x");
